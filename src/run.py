@@ -57,8 +57,14 @@ if args.variant == 'vanilla':
     model = model.GPT(mconf)
     model = model.to(device)
 elif args.variant == 'synthesizer':
-    
-    pass # TODO [part g]: Make some other model here
+    mconf = model.GPTConfig(vocab_size=pretrain_dataset.vocab_size,
+                            block_size=pretrain_dataset.block_size,
+                            n_layer=4,
+                            n_head=8,
+                            n_embd=256,
+                            synthesizer=True)
+    model = model.GPT(mconf)
+    model = model.to(device)
 
 # From here on, your code should be identical independent of which
 # variant (vanilla or synthesizer) has been chosen.
@@ -81,6 +87,7 @@ if args.function == 'pretrain':
     #     warmup_tokens=512*20
     #     final_tokens=200*len(pretrain_dataset)*block_size
     #     num_workers=4
+
     raise NotImplementedError
 elif args.function == 'finetune':
     assert args.writing_params_path is not None
@@ -97,28 +104,41 @@ elif args.function == 'finetune':
     #     2. Finetune the model on this corpus
     #     3. Save the resulting model in args.writing_params_path
     # - Make sure to use the following hyperparameters:
-    #     Hyperparameters for finetuning WITHOUT a pretrained model:
-    #         max_epochs=75
-    #         batch_size=256
-    #         learning_rate=6e-4
-    #         lr_decay=True
-    #         warmup_tokens=512*20
-    #         final_tokens=200*len(pretrain_dataset)*block_size
-    #         num_workers=4
-    #     Hyperparameters for finetuning WITH a pretrained model:
-    #         max_epochs=10
-    #         batch_size=256
-    #         learning_rate=6e-4
-    #         lr_decay=True
-    #         warmup_tokens=512*20
-    #         final_tokens=200*len(pretrain_dataset)*block_size
-    #         num_workers=4
 
-    # Part C
+    # Load the finetuning corpus and create the finetuning dataset
+    finetune = open(args.finetune_corpus_path, 'r').read()
+    finetune_dataset = dataset.NameDataset(pretrain_dataset, finetune)
+
+    # If it is provided, load any model before finetuning or evaluating.
     if args.reading_params_path:
-        new_model =
+        model.load_state_dict(torch.load(args.reading_params_path))
+        # Hyperparameters for finetuning WITH a pretrained model:
+        tconf = trainer.TrainerConfig(max_epochs=10,
+                                      batch_size=256,
+                                      learning_rate=6e-4,
+                                      lr_decay=True,
+                                      warmup_tokens=512*20,
+                                      final_tokens=200*len(pretrain_dataset)*block_size,
+                                      num_workers=4)
 
-    raise NotImplementedError
+    # Hyperparameters for finetuning WITHOUT a pretrained model:
+    else:
+        tconf = trainer.TrainerConfig(max_epochs=75,
+                                      batch_size=256,
+                                      learning_rate=6e-4,
+                                      lr_decay=True,
+                                      warmup_tokens=512*20,
+                                      final_tokens=200*len(pretrain_dataset)*block_size,
+                                      num_workers=4)
+
+    # Use our finetuning corpus to finetune our model
+    trainer = trainer.Trainer(model, finetune_dataset, None, tconf)
+    trainer.train()
+
+    # Save the new model
+    trainer.save_checkpoint()
+
+
 elif args.function == 'evaluate':
     assert args.outputs_path is not None
     assert args.reading_params_path is not None
