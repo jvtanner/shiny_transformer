@@ -23,6 +23,7 @@ class GPTConfig:
     resid_pdrop = 0.1
     attn_pdrop = 0.1
     additive = False
+    synthesizer = False
 
     def __init__(self, vocab_size, block_size, **kwargs):
         self.vocab_size = vocab_size
