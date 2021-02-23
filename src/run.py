@@ -97,7 +97,6 @@ if args.function == 'pretrain':
 elif args.function == 'finetune':
     assert args.writing_params_path is not None
     assert args.finetune_corpus_path is not None
-    # TODO [part c] [part f]:
     # - Given:
     #     1. A finetuning corpus specified in args.finetune_corpus_path
     #     2. A path args.reading_params_path containing pretrained model
@@ -108,7 +107,6 @@ elif args.function == 'finetune':
     #         into the model
     #     2. Finetune the model on this corpus
     #     3. Save the resulting model in args.writing_params_path
-    # - Make sure to use the following hyperparameters:
 
     # Load the finetuning corpus and create the finetuning dataset
     finetune = open(args.finetune_corpus_path, 'r').read()
