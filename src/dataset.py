@@ -167,8 +167,39 @@ class CharCorruptionDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # TODO [part e]: see spec above
-        raise NotImplementedError
+
+        # Randomly truncate doc to a len between 4 and int(self.block_size*7/8) chars
+        document = self.data[idx][0:random.randint(4, int(self.block_size * 7 / 8))]
+
+        # Randomly decide on area to mask by creating 2 boundary divisions
+        divide_1 = random.randint(0, len(document))
+
+        if random.randint(0, 1) == 1:
+            divide_1 = random.randint(0, divide_1)
+            divide_2 = divide_1
+        else:
+            divide_1 = divide_1
+            divide_2 = random.randint(divide_1, len(document))
+
+        # Divide the doc into three: [prefix] [masked_content] [suffix]
+        prefix = document[:divide_1]
+        masked_content = document[divide_1:divide_2]
+        suffix = document[divide_2:]
+
+        # Rearrange three portions: [prefix] MASK_CHAR [suffix] MASK_CHAR [masked_content] [pads]
+        masked_document = prefix + self.MASK_CHAR + suffix + self.MASK_CHAR + masked_content
+        # add + self.MASK_CHAR to end of prev ^?
+        pads = self.PAD_CHAR * (self.block_size - len(masked_document))
+        masked_document = masked_document + pads
+
+        # Establish two windows of interest, then transition to tensor form
+        x_init = masked_document[:-1]
+        y_init = masked_document[1:]
+
+        x = torch.tensor([self.stoi[a] for a in x_init], dtype=torch.long)
+        y = torch.tensor([self.stoi[b] for b in y_init], dtype=torch.long)
+
+        return x, y
 
 """
 Code under here is strictly for your debugging purposes; feel free to modify
